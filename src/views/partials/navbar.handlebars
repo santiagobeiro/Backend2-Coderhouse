@@ -1,0 +1,12 @@
+<nav class="navbar">
+    <img src="" alt="">
+    <ul class="ulnav">
+        <li><a href="/">Productos</a></li>
+        <li>
+            <form class="inputCart" action="/carts/{{cid}}" method="get">
+                <label for="limit">Id del carrito:</label>
+                <input type="text" id="cid" name="cid"/>
+                <button type="submit">Ver Carrito</button>
+            </form>
+        </li>
+    </ul>
