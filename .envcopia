@@ -1,2 +1,8 @@
 MONGO_URL= "mongodb+srv://qdaaz0:EeUHW79tFUhF6Sjs@cluster0.bdcfg.mongodb.net/proyectofinal?retryWrites=true&w=majority"
 PERSISTENSE = "MONGO"
+
+JWT_SECRET='bf300047fa22fd6d86a13b409481c2ba1be19f1e61217e98705c1eb365372a3a'
+MAILER_HOST='smtp.gmail.com'
+MAILER_PORT=587
+MAILER_USERNAME=
+MAILER_PASSWORD=

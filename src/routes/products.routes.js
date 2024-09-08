@@ -4,6 +4,8 @@ import { Router } from "express";
 import * as productController from "../controllers/product.controller.js";
 import { productValidation } from "../middlewares/productValidation.js";
 import { idValidation } from "../middlewares/idValidation.js";
+import passport from "passport";
+import { roleValidation } from "../middlewares/rolevalidation.js";
 
 
 // instancias
@@ -16,14 +18,12 @@ productRouter.get("/", productController.getAllProducts);
 
 productRouter.get("/:pid", productController.getProductById);
 
-productRouter.post("/", productValidation, productController.createProduct);
+productRouter.post("/", productValidation, passport.authenticate("jwt",{session: false}), roleValidation(['admin']), productController.createProduct);
 
 productRouter.post("/baseinicio", productController.createProduct); // un solo uso: para agregar los 45 productos de ejemplo
 
-productRouter.put("/:pid", idValidation, productController.updateProduct);
+productRouter.put("/:pid", idValidation, passport.authenticate("jwt",{session: false}), roleValidation(['admin']), productController.updateProduct);
 
-productRouter.post("/:pid", productController.updateProduct); // un solo uso, para agregar las imagenes a cada producto.
-
-productRouter.delete("/:pid", productController.deleteProduct)
+productRouter.delete("/:pid", passport.authenticate("jwt",{session: false}), roleValidation(['admin']), productController.deleteProduct)
 
 export default productRouter;

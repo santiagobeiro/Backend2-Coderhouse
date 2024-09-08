@@ -1,9 +1,16 @@
-import { Router } from "express";
-import { userModel } from "../Daos/models/user.model.js";
-import { createHash } from "../utils/hash.js";
-import { generateToken } from "../utils/jwt.js";
 import passport from "passport";
 import * as service from '../services/cart.services.js'
+import { Router } from "express";
+import { userModel } from "../Daos/models/user.model.js";
+import { roleValidation } from "../middlewares/rolevalidation.js";
+import { resUserDto } from "../dtos/user.dto.js";
+import { createHash } from "../utils/hash.js";
+import { generateToken } from "../utils/jwt.js";
+import  MailService  from "../services/mailing.services.js";
+
+
+const mailService = new MailService();
+
 
 const router = Router();
 
@@ -17,7 +24,7 @@ router.post("/register", async (req, res) => {
   try {
     const hashPassword = await createHash(password);
 
-    const userCart = await await service.createCart();
+    const userCart =  await service.createCart();
 
     const user = await userModel.create({
       first_name,
@@ -28,19 +35,22 @@ router.post("/register", async (req, res) => {
       role,
       cart: userCart._id,
     });
+
+    await mailService.sendMail({
+      to: email,
+      subject: "Bienvenido",
+      type: "welcome",
+      name: first_name,
+    });
+
+
     res.status(201).json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-router.post(
-  "/login",
-  passport.authenticate("login", {
-    session: false,
-    failureRedirect: "/api/auth/login-error",
-  }),
-  async (req, res) => {
+router.post("/login", passport.authenticate("login", {session: false,failureRedirect: "/api/auth/login-error", }), roleValidation(["user", "admin"]), async (req, res) => {
     const user = req.user;
 
     if (!user) {
@@ -64,15 +74,17 @@ router.post(
 );
 
 router.get("/login-error", (req, res) => {
-  res.status(401).json({ error: "Credenciales incorrectas" });
+    res.status(401).json({ error: "Credenciales incorrectas" });
 });
 
-router.get(
-  "/current",
-  passport.authenticate("current", { session: false }),
-  (req, res) => {
-    res.status(200).json({ message: "bienvenido", user: req.user });
+router.get("/current", passport.authenticate("jwt", { session: false }), roleValidation(['admin','user']),(req, res) => {
+    res.status(200).json({ message: "bienvenido", user: resUserDto(req.user) });
   }
 );
+
+router.get("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({message: "Sesion Finalizada"});
+});
 
 export default router;

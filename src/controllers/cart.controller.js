@@ -1,4 +1,9 @@
 import * as service from '../services/cart.services.js'
+import { getProductById, updateProduct } from '../services/product.services.js';
+import { getUserByEmail } from '../services/user.services.js';
+import { createTicket } from '../services/ticket.services.js';
+import { resTicketDto } from '../dtos/ticket.dto.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export const createCart = async (req, res, next) => {
     try {
@@ -104,4 +109,66 @@ export const addProductToCart = async (req, res, next) => {
   };
 
   
-  
+  export const purchase = async (req, res) => {
+    const { cid } = req.params;
+
+    try {
+        const cart = await service.getCartById(cid);
+
+        if (!cart) {
+            return res.status(400).send("Carrito no encontrado");
+        }
+
+        let ticketProducts = [];
+        let productsOutOfStock = [];
+        let TotalPurchase = 0;
+
+        for (const product of cart.products) {
+            try {
+                const dbProduct = await getProductById(product.product);
+
+                if (dbProduct) {
+                    if (product.quantity <= dbProduct.stock) {
+                        await updateProduct(product.product, { stock: dbProduct.stock - product.quantity });
+                        ticketProducts.push(product);
+                        TotalPurchase += product.quantity * dbProduct.price;
+                        await service.removefromCart(cid, product.product._id);
+                    } else {
+                        productsOutOfStock.push(product);
+                    }
+                } else {
+                    productsOutOfStock.push(product);
+                }
+            } catch (error) {
+                console.error(`Error processing product ${product.product}:`, error);
+                productsOutOfStock.push(product);
+            }
+        }
+
+        const purchaseUser = await getUserByEmail(req.user.email);
+
+        if (!purchaseUser) {
+            return res.status(400).send("Usuario Inexistente");
+        }
+
+        const code = uuidv4();
+
+        const ticket = {
+            code: code,
+            amount: TotalPurchase,
+            purchaser: req.user.email,
+            purchaserId: purchaseUser[0]._id
+        };
+
+        const ticketResponse = await createTicket(ticket);
+
+        if (ticketResponse) {
+            return res.status(200).json({ ticket: resTicketDto(ticketResponse[0]), ticketProducts: ticketProducts, productOutOfStock: productsOutOfStock });
+        } else {
+            return res.status(400).send("No fue posible generar el ticket");
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: error.message });
+    }
+};
